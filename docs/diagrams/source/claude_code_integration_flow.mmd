@@ -1,0 +1,56 @@
+flowchart TD
+    USER(["👤 User"])
+    WPF["WPF Application\n(mAIrem UI)"]
+
+    subgraph APP_LAYER ["Application Layer — C# / .NET"]
+        VM["ViewModel\n(ReactiveUI + Autofac)"]
+        SVC["IntegrationService"]
+        RT["ClaudeCodeRuntime\nimplements IClaudeRuntime"]
+        PERM["PermissionProfileResolver\n(allowlist: dirs, ops)"]
+        PROMPT["PromptBuilder\n(context assembly)"]
+        PARSER["ResultParser\n(structured output)"]
+    end
+
+    subgraph CLI_BRIDGE ["CLI Bridge — Local Process"]
+        PROC["Process Wrapper\n(System.Diagnostics.Process)"]
+        CLAUDECODE["Claude Code CLI\n(claude --print --output-format json)"]
+    end
+
+    subgraph MCP_LAYER ["MCP Layer — Mediated Local Access"]
+        MCPCFG["MCP Config\n(project-visible JSON)"]
+        MCPSRV["MCP Server(s)\n(filesystem, custom tools)"]
+        FS["Local Filesystem\n(allowlisted paths only)"]
+    end
+
+    MODEL(["☁️ Claude Model\n(Anthropic API — via Claude Code)"])
+
+    AUDIT[("Audit / Trace Log")]
+
+    USER -->|"prompt / command"| WPF
+    WPF --> VM
+    VM --> SVC
+    SVC --> PERM
+    PERM -->|"validate allowed\ndirs + operations"| SVC
+    SVC --> PROMPT
+    PROMPT -->|"assembled context"| RT
+    RT --> PROC
+    PROC -->|"shell invocation\nwith flags + stdin"| CLAUDECODE
+    CLAUDECODE <-->|"token exchange\n(HTTPS)"| MODEL
+    CLAUDECODE <-->|"tool calls\n(MCP protocol)"| MCPSRV
+    MCPSRV --> MCPCFG
+    MCPSRV -->|"read / write\n(controlled scope)"| FS
+    CLAUDECODE -->|"structured JSON\nresponse"| PROC
+    PROC --> PARSER
+    PARSER -->|"parsed result"| SVC
+    SVC --> VM
+    VM -->|"result display"| WPF
+    WPF -->|"feedback"| USER
+
+    RT -.->|"log invocation\n+ permissions used"| AUDIT
+    PERM -.->|"log access decisions"| AUDIT
+
+    style APP_LAYER fill:#e8f0fe,stroke:#3c6bc9
+    style CLI_BRIDGE fill:#fef3e2,stroke:#e6920a
+    style MCP_LAYER fill:#e6f4ea,stroke:#34a853
+    style MODEL fill:#fce8e6,stroke:#d93025
+    style AUDIT fill:#f1f3f4,stroke:#9aa0a6,stroke-dasharray:4 4

@@ -1,0 +1,51 @@
+site_name: mAIrem Claude Integration Studio
+site_url: https://faucon.github.io/mairem-claude-integration-studio-docs/
+repo_url: https://github.com/FAUCON/mairem-claude-integration-studio-docs
+repo_name: FAUCON/mairem-claude-integration-studio-docs
+site_description: >
+  Governed C# application that integrates mAIrem with Claude through two approved
+  runtime paths: Claude Code CLI with MCP (Phase 1) and Messages API (Phase 2).
+docs_dir: docs
+site_dir: site
+exclude_docs: |
+  diagrams/rendered/*
+
+# ---------------------------------------------------------------------------
+# Theme — consistent across all workspace projects
+# ---------------------------------------------------------------------------
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: indigo
+    accent: cyan
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+# ---------------------------------------------------------------------------
+# Markdown extensions — Mermaid rendering requires these; do not remove
+# ---------------------------------------------------------------------------
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+# ---------------------------------------------------------------------------
+# Navigation — must match real docs/ file set at every session closure
+# ---------------------------------------------------------------------------
+nav:
+  - Overview: index.md
+  - Architecture: architecture.md
+  - Roadmap: roadmap.md
+  - Session Logs:
+      - Session 001: session_logs/session_001.md

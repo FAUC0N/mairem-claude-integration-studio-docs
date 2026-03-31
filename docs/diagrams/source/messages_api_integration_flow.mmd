@@ -1,0 +1,61 @@
+flowchart TD
+    USER(["👤 User"])
+    WPF["WPF Application\n(mAIrem UI)"]
+
+    subgraph APP_LAYER ["Application Layer — C# / .NET"]
+        VM["ViewModel\n(ReactiveUI + Autofac)"]
+        SVC["IntegrationService"]
+        RT["MessagesApiRuntime\nimplements IClaudeRuntime"]
+        PERM["PermissionProfileResolver\n(allowlist: dirs, ops)"]
+        PROMPT["PromptBuilder\n(context + tool definitions)"]
+        ORCH["ToolLoopOrchestrator\n(agentic loop controller)"]
+        PARSER["ResultParser\n(content blocks → domain model)"]
+    end
+
+    subgraph TOOL_LAYER ["Tool Layer — App-Owned Connectors"]
+        TOOL_FS["FileSystemTool\n(read/write — allowlisted)"]
+        TOOL_CUSTOM["Custom Tools\n(project-specific connectors)"]
+        FS["Local Filesystem\n(allowlisted paths only)"]
+    end
+
+    subgraph API_LAYER ["Anthropic API"]
+        APIEP["POST /v1/messages\n(HTTPS — API key auth)"]
+        MODEL(["☁️ Claude Model"])
+    end
+
+    AUDIT[("Audit / Trace Log")]
+
+    USER -->|"prompt / command"| WPF
+    WPF --> VM
+    VM --> SVC
+    SVC --> PERM
+    PERM -->|"validate allowed\ndirs + operations"| SVC
+    SVC --> PROMPT
+    PROMPT -->|"messages[] +\ntool definitions"| RT
+    RT --> ORCH
+
+    ORCH -->|"POST request\n(messages + tools)"| APIEP
+    APIEP <--> MODEL
+    MODEL -->|"response\n(text or tool_use)"| APIEP
+    APIEP -->|"response body"| ORCH
+
+    ORCH -->|"stop_reason = tool_use\nexecute locally"| TOOL_FS
+    ORCH -->|"stop_reason = tool_use\nexecute locally"| TOOL_CUSTOM
+    TOOL_FS -->|"controlled access\n(scope-checked)"| FS
+    TOOL_CUSTOM -.->|"extensible connectors"| FS
+
+    ORCH -->|"tool_result → next turn\n(loop continues)"| ORCH
+    ORCH -->|"stop_reason = end_turn\nfinal result"| PARSER
+    PARSER -->|"parsed result"| SVC
+    SVC --> VM
+    VM -->|"result display"| WPF
+    WPF -->|"feedback"| USER
+
+    RT -.->|"log API calls\n+ token usage"| AUDIT
+    PERM -.->|"log access decisions"| AUDIT
+    ORCH -.->|"log tool calls\n+ results"| AUDIT
+
+    style APP_LAYER fill:#e8f0fe,stroke:#3c6bc9
+    style TOOL_LAYER fill:#e6f4ea,stroke:#34a853
+    style API_LAYER fill:#fce8e6,stroke:#d93025
+    style AUDIT fill:#f1f3f4,stroke:#9aa0a6,stroke-dasharray:4 4
